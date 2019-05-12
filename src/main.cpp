@@ -18,7 +18,7 @@
 #include <unsupported/Eigen/NonLinearOptimization>
 #include <unsupported/Eigen/NumericalDiff>
 #include <opencv2/core/eigen.hpp>
-
+#include "Converter.h"
 
 
 #include "feature.h"
@@ -61,7 +61,54 @@ int main(int argc, char **argv)
 
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
 
-    
+    //read time
+    ifstream fin ( filepath+"/times.txt" );
+    if ( !fin )
+    {
+        cout<<"please open this file in the 05 file!"<<endl;
+        return 1;
+    }
+    vector<double> timeStamps;
+    while ( !fin.eof() )
+    {
+        double left_time;
+        fin>>left_time;
+        //timeStamps.push_back ( left_time );
+        if ( fin.good() == false )
+            break;
+        timeStamps.push_back ( left_time );
+    }
+    fin.close();
+
+    int ss = timeStamps.size();
+    vector<Eigen::Quaterniond> qrotarion_;
+    vector<Eigen::Vector3d> translation_;
+    ifstream gfin(filepath+"/KITTI_00_gt.txt");
+    double r1, r2, r3, t1, r4, r5, r6, t2, r7, r8, r9, t3;
+    Eigen::Matrix3d r33;
+    Eigen::Vector3d t31;
+
+    while (!gfin.eof()){
+        gfin >> r1 >> r2 >> r3 >> t1
+             >> r4 >> r5 >>r6>> t2
+             >> r7 >>r8>> r9 >> t3;
+        r33 << r1,r2,r3,r4,r5,r6,r7,r8,r9;
+        Eigen::Quaterniond q(r33);
+        qrotarion_.emplace_back(q);
+         t31<< t1,t2,t3;
+        translation_.emplace_back(t31);
+    }
+    gfin.close();
+
+    ofstream ofout(filepath+"/KITTI00_ground.txt");
+    for(size_t i=0; i<timeStamps.size(); i++){
+        ofout << timeStamps[i]<< " " << translation_[i](0) << " "<< translation_[i](1) << " "<< translation_[i](2)
+                << " "<< qrotarion_[i].x() << " "<< qrotarion_[i].y() << " "<< qrotarion_[i].z() << " "<< qrotarion_[i].w() << "\n";
+
+
+    }
+    ofout.close();
+
     float fx = fSettings["Camera.fx"];
     float fy = fSettings["Camera.fy"];
     float cx = fSettings["Camera.cx"];
@@ -108,6 +155,7 @@ int main(int argc, char **argv)
     clock_t tic = clock();
     std::vector<FeaturePoint> oldFeaturePointsLeft;
     std::vector<FeaturePoint> currentFeaturePointsLeft;
+    ofstream ofestimate(filepath+"/KITTI00_estimate.txt");
 
     for (int frame_id = init_frame_id+1; frame_id < 9000; frame_id++)
     {
@@ -188,6 +236,14 @@ int main(int argc, char **argv)
         if(abs(rotation_euler[1])<0.1 && abs(rotation_euler[0])<0.1 && abs(rotation_euler[2])<0.1)
         {
             integrateOdometryStereo(frame_id, rigid_body_transformation, frame_pose, rotation, translation_stereo);
+            cv::Mat Rwcm = frame_pose(cv::Range(0, 3), cv::Range(0, 3));
+            cv::Mat twcm = frame_pose(cv::Range(0, 3), cv::Range(3, 4));
+            std::cout << twcm << std::endl;
+            vector<double> qwc = Converter::toQuaternion(Rwcm);
+            Eigen::Vector3d twc = Converter::toVector3d(twcm);
+            std::cout << twc << std::endl;
+            ofestimate << timeStamps[frame_id-1] << " " << twc(0) << " " << twc(1) << " " << twc(2) << " "
+                       << qwc[0] << " " << qwc[1] << " " << qwc[2] << " " << qwc[3] << "\n";
 
         } else {
 

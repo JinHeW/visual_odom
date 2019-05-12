@@ -3,8 +3,8 @@ set (CMAKE_CXX_STANDARD 11)
 project(VisualOdometry)
 
 
-find_package (Eigen3 REQUIRED NO_MODULE)
-include_directories (${EIGEN3_INCLUDE_DIR})
-message(STATUS "EIGENPATH: " ${EIGEN3_INCLUDE_DIR})
-
+#find_package (Eigen3 REQUIRED NO_MODULE)
+include_directories ( /usr/include/eigen3)
+#message(STATUS "EIGENPATH: " ${EIGEN3_INCLUDE_DIR})
+list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules )
 add_subdirectory(src)
