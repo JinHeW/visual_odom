@@ -6,33 +6,34 @@
 
 #include "matrix.h"
 
+namespace soft {
+    struct errors {
+        int32_t first_frame;
+        float r_err;
+        float t_err;
+        float len;
+        float speed;
+
+        errors(int32_t first_frame, float r_err, float t_err, float len, float speed) :
+                first_frame(first_frame), r_err(r_err), t_err(t_err), len(len), speed(speed) {}
+    };
 
 
-struct errors {
-  int32_t first_frame;
-  float   r_err;
-  float   t_err;
-  float   len;
-  float   speed;
-  errors (int32_t first_frame,float r_err,float t_err,float len,float speed) :
-    first_frame(first_frame),r_err(r_err),t_err(t_err),len(len),speed(speed) {}
-};
+    std::vector<Matrix> loadPoses(std::string file_name);
 
+    std::vector<float> trajectoryDistances(std::vector<Matrix> &poses);
 
-std::vector<Matrix> loadPoses(std::string file_name);
+    void plotPathPlot(std::string dir, std::vector<int32_t> &roi, int32_t idx);
 
-std::vector<float> trajectoryDistances (std::vector<Matrix> &poses);
+    void saveErrorPlots(std::vector<errors> &seq_err, std::string plot_error_dir, char *prefix);
 
-void plotPathPlot (std::string dir,std::vector<int32_t> &roi,int32_t idx);
+    void plotErrorPlots(std::string dir, char *prefix);
 
-void saveErrorPlots(std::vector<errors> &seq_err,std::string plot_error_dir,char* prefix);
+    float rotationError(Matrix &pose_error);
 
-void plotErrorPlots (std::string dir,char* prefix);
+    float translationError(Matrix &pose_error);
 
-float rotationError(Matrix &pose_error);
+    std::vector<errors> calcSequenceErrors(std::vector<Matrix> &poses_gt, std::vector<Matrix> &poses_result);
 
-float translationError(Matrix &pose_error);
-
-std::vector<errors> calcSequenceErrors (std::vector<Matrix> &poses_gt,std::vector<Matrix> &poses_result);
-
-void saveSequenceErrors (std::vector<errors> &err,std::string file_name);
+    void saveSequenceErrors(std::vector<errors> &err, std::string file_name);
+}

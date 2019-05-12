@@ -19,16 +19,16 @@
 #include <unsupported/Eigen/NumericalDiff>
 #include <opencv2/core/eigen.hpp>
 #include "Converter.h"
-
+#include <thread>
 
 #include "feature.h"
 #include "utils.h"
 #include "evaluate_odometry.h"
 #include "visualOdometry.h"
 #include "Frame.h"
-
+#include "MapDrawer.h"
 using namespace std;
-
+using namespace soft;
 int main(int argc, char **argv)
 {
 
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
         cerr << "Display ground truth trajectory" << endl;
         // load ground truth pose
         string filename_pose = string(argv[3]);
-        pose_matrix_gt = loadPoses(filename_pose);
+        pose_matrix_gt = soft::loadPoses(filename_pose);
 
     }
     if(argc < 3)
@@ -114,6 +114,17 @@ int main(int argc, char **argv)
     float cx = fSettings["Camera.cx"];
     float cy = fSettings["Camera.cy"];
     float bf = fSettings["Camera.bf"];
+    float mCameraSize = fSettings["Viewer.CameraSize"];
+    float mCameraLineWidth = fSettings["Viewer.CameraLineWidth"];
+    double fps_ = fSettings["Camera.fps"];
+
+    float mViewpointX = fSettings["Viewer.ViewpointX"];
+    float mViewpointY = fSettings["Viewer.ViewpointY"];
+    float mViewpointZ = fSettings["Viewer.ViewpointZ"];
+    float mViewpointF = fSettings["Viewer.ViewpointF"];
+    MapDrawer* mpViewer = new MapDrawer(mCameraSize, mCameraLineWidth, mViewpointX, mViewpointY, mViewpointZ, mViewpointF, fps_);
+
+    thread* mptViewer = new thread(&MapDrawer::Run, mpViewer);
 
     cv::Mat projMatrl = (cv::Mat_<float>(3, 4) << fx, 0., cx, 0., 0., fy, cy, 0., 0,  0., 1., 0.);
     cv::Mat projMatrr = (cv::Mat_<float>(3, 4) << fx, 0., cx, bf, 0., fy, cy, 0., 0,  0., 1., 0.);
@@ -134,7 +145,7 @@ int main(int argc, char **argv)
 
     std::cout << "frame_pose " << frame_pose << std::endl;
     cv::Mat trajectory = cv::Mat::zeros(600, 1200, CV_8UC3);
-    FeatureSet currentVOFeatures;
+    soft::FeatureSet currentVOFeatures;
     cv::Mat points4D, points3D;
     int init_frame_id = 0;
 
@@ -153,8 +164,8 @@ int main(int argc, char **argv)
     // Run visual odometry
     // -----------------------------------------
     clock_t tic = clock();
-    std::vector<FeaturePoint> oldFeaturePointsLeft;
-    std::vector<FeaturePoint> currentFeaturePointsLeft;
+    std::vector<soft::FeaturePoint> oldFeaturePointsLeft;
+    std::vector<soft::FeaturePoint> currentFeaturePointsLeft;
     ofstream ofestimate(filepath+"/KITTI00_estimate.txt");
 
     for (int frame_id = init_frame_id+1; frame_id < 9000; frame_id++)
@@ -238,10 +249,14 @@ int main(int argc, char **argv)
             integrateOdometryStereo(frame_id, rigid_body_transformation, frame_pose, rotation, translation_stereo);
             cv::Mat Rwcm = frame_pose(cv::Range(0, 3), cv::Range(0, 3));
             cv::Mat twcm = frame_pose(cv::Range(0, 3), cv::Range(3, 4));
-            std::cout << twcm << std::endl;
+            //std::cout << twcm << std::endl;
             vector<double> qwc = Converter::toQuaternion(Rwcm);
             Eigen::Vector3d twc = Converter::toVector3d(twcm);
-            std::cout << twc << std::endl;
+            Eigen::Matrix3d Rwc = Converter::toMatrix3d(Rwcm);
+            Sophus::SE3 Twc_(Rwc, twc);
+            mpViewer->SetCurrentCameraPose(Twc_);
+            mpViewer->addKeyframePos(0.1*twc);
+            //std::cout << twc << std::endl;
             ofestimate << timeStamps[frame_id-1] << " " << twc(0) << " " << twc(1) << " " << twc(2) << " "
                        << qwc[0] << " " << qwc[1] << " " << qwc[2] << " " << qwc[3] << "\n";
 
@@ -267,9 +282,10 @@ int main(int argc, char **argv)
         // std::cout << "Pose" << pose.t() << std::endl;
         std::cout << "FPS: " << fps << std::endl;
 
-        display(frame_id, trajectory, pose, pose_matrix_gt, fps, display_ground_truth);
+        //display(frame_id, trajectory, pose, pose_matrix_gt, fps, display_ground_truth);
 
     }
+    mptViewer->join();
 
     return 0;
 }

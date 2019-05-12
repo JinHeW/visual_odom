@@ -19,24 +19,25 @@
 #include <unsupported/Eigen/NumericalDiff>
 #include <opencv2/core/eigen.hpp>
 #include "feature.h"
+namespace soft {
+    class Bucket {
 
-class Bucket
-{
+    public:
+        int id;
+        int max_size;
 
-public:
-    int id;
-    int max_size;
+        FeatureSet features;
 
-    FeatureSet features;
+        Bucket(int);
 
-    Bucket(int);
-    ~Bucket();
+        ~Bucket();
 
-    void add_feature(cv::Point2f, int);
-    void get_features(FeatureSet&);
+        void add_feature(cv::Point2f, int);
 
-    int size();
-    
-};
+        void get_features(FeatureSet &);
 
+        int size();
+
+    };
+}
 #endif

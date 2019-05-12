@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 set (CMAKE_CXX_STANDARD 11)
 project(VisualOdometry)
 
-
+set( CMAKE_CXX_FLAGS "-std=c++11 -march=native -O3 -pthread" )
 #find_package (Eigen3 REQUIRED NO_MODULE)
 include_directories ( /usr/include/eigen3)
 #message(STATUS "EIGENPATH: " ${EIGEN3_INCLUDE_DIR})
