@@ -122,9 +122,9 @@ int main(int argc, char **argv)
     float mViewpointY = fSettings["Viewer.ViewpointY"];
     float mViewpointZ = fSettings["Viewer.ViewpointZ"];
     float mViewpointF = fSettings["Viewer.ViewpointF"];
-    MapDrawer* mpViewer = new MapDrawer(mCameraSize, mCameraLineWidth, mViewpointX, mViewpointY, mViewpointZ, mViewpointF, fps_);
+    shared_ptr<MapDrawer> mpViewer = make_shared<MapDrawer>(mCameraSize, mCameraLineWidth, mViewpointX, mViewpointY, mViewpointZ, mViewpointF, fps_);
 
-    thread* mptViewer = new thread(&MapDrawer::Run, mpViewer);
+    shared_ptr<thread> mptViewer(new thread(&MapDrawer::Run, mpViewer));
 
     cv::Mat projMatrl = (cv::Mat_<float>(3, 4) << fx, 0., cx, 0., 0., fy, cy, 0., 0,  0., 1., 0.);
     cv::Mat projMatrr = (cv::Mat_<float>(3, 4) << fx, 0., cx, bf, 0., fy, cy, 0., 0,  0., 1., 0.);
@@ -286,6 +286,7 @@ int main(int argc, char **argv)
 
     }
     mptViewer->join();
+
 
     return 0;
 }
